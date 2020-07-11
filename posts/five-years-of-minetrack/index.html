@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html><head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <link rel="shortcut icon" href="https://blog.nklow.com/favicon.ico">
+    
+    <link rel="stylesheet" href="/css/style.min.css">
+
+    <title>Five Years of Minetrack</title>
+</head>
+<body><header id="banner">
+    <h2><a href="https://blog.nklow.com">Tales from a Crypt</a></h2>
+    <nav>
+        <ul>
+            
+        </ul>
+    </nav>
+</header>
+<main id="content">
+<article>
+    <header id="post-header">
+        <h1>Five Years of Minetrack</h1><time>July 11, 2020</time></header><p>Over five years ago I quickly wrote and glued together <a href="https://minetrack.me">Minetrack</a> (originally &ldquo;FastTrack&rdquo; 🙃). It was effectively an auto refreshing web version of the <a href="https://minecraft.gamepedia.com/Tutorials/Menu_screen#Multiplayer">Minecraft multiplayer menu</a> used to display player counts.</p>
+<figure>
+    <img src="/Minetrack_images/early_version.png"/> <figcaption>
+            <p>An early (redesigned) version of Minetrack, shortly after release</p>
+        </figcaption>
+</figure>
+
+<p><strong>But why?</strong></p>
+<p>It had a simple purpose: in an era of frequent <a href="https://www.cloudflare.com/learning/ddos/what-is-a-ddos-attack/">DDoS attacks</a> on Minecraft servers, Minetrack offered an easy way to correlate player count shifts between competing Minecraft servers potentially suffering network issues.</p>
+<p>Minetrack was not a new idea. Several sites already existed to track Minecraft server player counts, such as <a href="https://web.archive.org/web/20130718164208/http://www.topmcnetworks.com/">Top MC Networks</a>. However they focused on historical trends (5 minute to 1 hour update intervals) whereas Minetrack offered <em>real-ish</em> time updates every 3-5 seconds. To help differentiate Minetrack (and avoid the nightmare of Javascript graphing libraries), I even refused to add a historical graph for over a year after release. 🤦‍♀️</p>
+<figure>
+    <img src="/Minetrack_images/later_version.png"/> <figcaption>
+            <p>A later version of Minetrack featuring the long awaited historical graph</p>
+        </figcaption>
+</figure>
+
+<p><strong>Well&hellip;</strong></p>
+<p>Minetrack was first and foremost, a tool designed for <em>me</em>. I offered it to others, and <a href="https://github.com/Cryptkeeper/Minetrack">open sourced its code</a>, but the design, feature set, and Minecraft servers it watched, were always reflective of my use case.</p>
+<p>Surprisingly, people embraced its messy codebase and limited functionality. Soon after, people began adapting Minetrack to fit their own use cases.</p>
+<p>Some people deployed their own Minetrack instance with a custom list of watched Minecraft servers. ⬇️</p>
+<figure>
+    <img src="/Minetrack_images/minetrackdotbreakingmcdotnet.png"/> <figcaption>
+            <p>
+                    <a href="https://minetrack.breakingmc.net">A Minetrack instance with a custom list of watched Minecraft servers</a></p>
+        </figcaption>
+</figure>
+
+<p>Some people redesigned it.</p>
+<figure>
+    <img src="/Minetrack_images/trackedserversdotcom.png"/> <figcaption>
+            <p>
+                    <a href="https://trackedservers.com">A redesigned version of Minetrack seen at trackedservers.com</a></p>
+        </figcaption>
+</figure>
+
+<p>Other people used it to monitor their internal infrastructure instead of public facing Minecraft servers.</p>
+<figure>
+    <img src="/Minetrack_images/statsdotnethergamesdotorg.png"/> <figcaption>
+            <p>
+                    <a href="https://stats.nethergames.org">A Minetrack instance being used for internal infrastructure monitoring</a></p>
+        </figcaption>
+</figure>
+
+<p>Finally, some weird people decided to rip out the backend and plug in their own, repurposing the frontend.</p>
+<figure>
+    <img src="/Minetrack_images/hytrackdotme.png"/> <figcaption>
+            <p>
+                    <a href="https://hytrack.me">A repurposed copy of the Minetrack frontend for monitoring Hypixel minigames</a></p>
+        </figcaption>
+</figure>
+
+<p>Early on, there was even a (briefly working) Chrome extension built by a friend.</p>
+<figure>
+    <img src="/Minetrack_images/chrome_extension.png"/> <figcaption>
+            <p>
+                    <a href="https://chrome.google.com/webstore/detail/minetrack-chrome/jliecigdlnddhdjddngpeknemdlgdkli?hl=en-US">A Minetrack Chrome extension</a></p>
+        </figcaption>
+</figure>
+
+<p>Slowly, various community bug reports and pull requests began to pop up.</p>
+<p>I started to relax my tight grip on the project and focused on welcoming these incoming changes. Piece by piece Minetrack evolved from a quick hack into something useful for the larger community, even if it was just to see who&rsquo;s fault a lagging connection was.</p>
+<p><strong>A Brief Timeline</strong></p>
+<ul>
+<li>Jan. 4th 2015: First commit! 🎉</li>
+<li>Jan. 19th 2015: Added <a href="https://wiki.vg/Mojang_API">Mojang API</a> and service status indicators.</li>
+<li>Jan. 31st 2015: Added the ability to add <code>mc.minetrack.me</code> to your Minecraft multiplayer server list.</li>
+<li>Jul. 26th 2015: Original Java codebase is deprecated and a <a href="https://nodejs.org/en/">Node.js</a> version is started.</li>
+<li>Nov. 2nd 2015: <a href="https://minecraft.gamepedia.com/Pocket_Edition">Minecraft &ldquo;Pocket Edition&rdquo;</a> support added.</li>
+<li>Nov. 25th 2015: Community feature: <a href="https://github.com/Cryptkeeper/Minetrack/commit/671c410a682b574db6f82d9f33b37d3fd5665a87">Minecraft server type indicators</a>.</li>
+<li>Nov. 30th 2015: <a href="https://github.com/Cryptkeeper/Minetrack/commit/dd8f5ec10d332aeecda5a614c0f281231a920fd4">Player count summaries</a>.</li>
+<li>Dec. 10th 2015: <a href="https://github.com/Cryptkeeper/Minetrack/commit/01f977b16e8892021e6d8cb34f75264bd6827a39">sqlite3 database logging</a>.</li>
+<li>Dec. 18th 2015: <a href="https://github.com/Cryptkeeper/Minetrack/commit/8f66475a28ee9ce32844d5621f90353bc18baa61">Historical graph is added (with controls!)</a></li>
+<li>Feb. 23rd 2016: Added &ldquo;categories&rdquo; to organize the growing list of Minecraft servers.</li>
+<li>Mar. 1st 2016: Community feature: <a href="https://github.com/Cryptkeeper/Minetrack/commit/43c284aa8a36566a43699b73ab3b836b76ffc1fd">Minecraft protocol version compatibility tracking</a>.</li>
+<li>Jun. 8th 2016: Community feature: <a href="https://github.com/Cryptkeeper/Minetrack/commit/0034d7fc036867474cf587ec251dbe3327bbe37b">SRV record unfurling</a>.</li>
+<li>Mar. 11th 2017: Added player count record tracking.</li>
+<li>Mar. 11th 2017: <a href="https://github.com/Cryptkeeper/Minetrack/commit/f722f5295a9264bd64217ee3141f7a5692d1e554">Added player count market share &ldquo;percentage bar&rdquo;</a>.</li>
+</ul>
+<p>And with the exception of little tweaks and fixes, that is how Minetrack sat for the next two years. In fact, there was a total of <strong>5</strong> commits during 2018 and 2019 combined - with 3 being community contributions!</p>
+<p><img src="/Minetrack_images/2018_2019_commits.png" alt="img"></p>
+<p>What happened? Well, <em>nothing</em>.</p>
+<p>Minetrack quietly ran without issue on its tiny $5/month <a href="https://www.digitalocean.com/products/droplets/">DigitalOcean droplet</a>, serving its purpose. Focused on <a href="https://hytale.com">Hytale</a>, I had forgotten about Minetrack and considered the project unsupported. It had been abandoned to run as long and as well as it could without intervention.</p>
+<p>What was Minetrack doing during this abandonment? Serving terabytes of bandwidth* with thousands of daily visitors. Even abandoned, Minetrack was still useful, which was more than I could have ever expected of it.</p>
+<p><em>*Admittedly, some of that bandwidth usage is likely due to its original, unoptimized protocol.</em> 😄</p>
+<p><strong>So, what&rsquo;s next?</strong></p>
+<p>Starting in 2020, several new versions of Minetrack have been released. These updates have focused on patching several long standing bugs, offer a host of optimizations, and a much needed facelift.</p>
+<p>You can consider this as some spring cleaning. 🧹</p>
+<figure>
+    <img src="/Minetrack_images/minetrackdotme.png"/> <figcaption>
+            <p>
+                    <a href="https://minetrack.me">The latest version of Minetrack as seen at minetrack.me</a></p>
+        </figcaption>
+</figure>
+
+<p>My goal is to continue shipping some more minor updates focused on user experience improvements and bug fixes.</p>
+<p>Besides code updates, I&rsquo;ve released over 4 years of Minetrack&rsquo;s databases freely into the public domain at <a href="https://data.minetrack.me/">data.minetrack.me</a>. My hope is to help start long term analysis of Minecraft&rsquo;s multiplayer player counts.</p>
+<p><strong>In summary</strong></p>
+<p>Completely against my original expectations, Minetrack has celebrated its 5th birthday and I&rsquo;m excited for its next 5 years. A big thank you to those of you who have helped shaped it over the years.</p>
+<p>Finally, an immense level of credit is due to <a href="https://github.com/Cryptkeeper/Minetrack/graphs/contributors">Minetrack&rsquo;s open source contributors</a>, and in particular <a href="https://github.com/hugmanrique">@hugmanrique</a>, who have collectively helped fix bugs, add features, and maintain the project. Thank you! ❤️</p>
+</article>
+
+        </main><footer id="footer">
+    
+</footer>
+</body>
+</html>
