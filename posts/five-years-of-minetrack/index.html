@@ -29,7 +29,7 @@
 
 <p><strong>But why?</strong></p>
 <p>It had a simple purpose: in an era of frequent <a href="https://www.cloudflare.com/learning/ddos/what-is-a-ddos-attack/">DDoS attacks</a> on Minecraft servers, Minetrack offered an easy way to correlate player count shifts between competing Minecraft servers potentially suffering network issues.</p>
-<p>Minetrack was not a new idea. Several sites already existed to track Minecraft server player counts, such as <a href="https://web.archive.org/web/20130718164208/http://www.topmcnetworks.com/">Top MC Networks</a>. However they focused on historical trends (5 minute to 1 hour update intervals) whereas Minetrack offered <em>real-ish</em> time updates every 3-5 seconds. To help differentiate Minetrack (and avoid the nightmare of Javascript graphing libraries), I even refused to add a historical graph for over a year after release. 🤦‍♀️</p>
+<p>Minetrack was not a new idea. Several sites already existed to track Minecraft server player counts, such as <a href="https://web.archive.org/web/20130718164208/http://www.topmcnetworks.com/">Top MC Networks</a>. However they focused on historical trends (5 minute update intervals) whereas Minetrack offered <em>real-ish</em> time 3 second update intervals. To help differentiate Minetrack (and avoid the nightmare of Javascript graphing libraries), I even refused to add a historical graph for over a year after release. 🤦‍♀️</p>
 <figure>
     <img src="/Minetrack_images/later_version.png"/> <figcaption>
             <p>A later version of Minetrack featuring the long awaited historical graph</p>
@@ -102,11 +102,11 @@
 <p><img src="/Minetrack_images/2018_2019_commits.png" alt="img"></p>
 <p>What happened? Well, <em>nothing</em>.</p>
 <p>Minetrack quietly ran without issue on its tiny $5/month <a href="https://www.digitalocean.com/products/droplets/">DigitalOcean droplet</a>, serving its purpose. Focused on <a href="https://hytale.com">Hytale</a>, I had forgotten about Minetrack and considered the project unsupported. It had been abandoned to run as long and as well as it could without intervention.</p>
-<p>What was Minetrack doing during this abandonment? Serving terabytes of bandwidth* with thousands of daily visitors. Even abandoned, Minetrack was still useful, which was more than I could have ever expected of it.</p>
+<p>What was Minetrack doing during this abandonment? Serving terabytes of bandwidth* monthly to thousands of daily visitors. Even abandoned, Minetrack was still useful, which was more than I could have ever expected of it.</p>
 <p><em>*Admittedly, some of that bandwidth usage is likely due to its original, unoptimized protocol.</em> 😄</p>
 <p><strong>So, what&rsquo;s next?</strong></p>
 <p>Starting in 2020, several new versions of Minetrack have been released. These updates have focused on patching several long standing bugs, offer a host of optimizations, and a much needed facelift.</p>
-<p>You can consider this as some spring cleaning. 🧹</p>
+<p>You can consider this a spring cleaning. 🧹</p>
 <figure>
     <img src="/Minetrack_images/minetrackdotme.png"/> <figcaption>
             <p>
@@ -115,7 +115,7 @@
 </figure>
 
 <p>My goal is to continue shipping some more minor updates focused on user experience improvements and bug fixes.</p>
-<p>Besides code updates, I&rsquo;ve released over 4 years of Minetrack&rsquo;s databases freely into the public domain at <a href="https://data.minetrack.me/">data.minetrack.me</a>. My hope is to help start long term analysis of Minecraft&rsquo;s multiplayer player counts.</p>
+<p>Besides code updates, I&rsquo;ve released over 4 years of Minetrack&rsquo;s databases freely into the public domain at <a href="https://data.minetrack.me/">data.minetrack.me</a>. My hope is to help kick-start some long term analysis of Minecraft&rsquo;s multiplayer player counts.</p>
 <p><strong>In summary</strong></p>
 <p>Completely against my original expectations, Minetrack has celebrated its 5th birthday and I&rsquo;m excited for its next 5 years. A big thank you to those of you who have helped shaped it over the years.</p>
 <p>Finally, an immense level of credit is due to <a href="https://github.com/Cryptkeeper/Minetrack/graphs/contributors">Minetrack&rsquo;s open source contributors</a>, and in particular <a href="https://github.com/hugmanrique">@hugmanrique</a>, who have collectively helped fix bugs, add features, and maintain the project. Thank you! ❤️</p>
