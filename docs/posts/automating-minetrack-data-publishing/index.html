@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html><head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <link rel="shortcut icon" href="https://blog.nklow.com/favicon.ico">
+    
+    <link rel="stylesheet" href="/css/style.min.css">
+
+    <title>Automating Data Publishing with BunnyCDN</title>
+</head>
+<body><header id="banner">
+    <h2><a href="https://blog.nklow.com">Tales from a Crypt</a></h2>
+    <nav>
+        <ul>
+            
+        </ul>
+    </nav>
+</header>
+<main id="content">
+<article>
+    <header id="post-header">
+        <h1>Automating Data Publishing with BunnyCDN</h1><time>August 2, 2020</time></header><p>As <a href="https://minetrack.me">Minetrack</a> continually polls Minecraft servers, the  collected player counts are timestamped and inserted into an <a href="https://sqlite.org">SQLite</a> database. Never one to hoard data (&hellip;and to free up some disk space) I began publishing Minetrack&rsquo;s databases at <a href="https://data.minetrack.me">data.minetrack.me</a>.</p>
+<p>Unfortunately the process of preparing a database for publishing is rather annoying.</p>
+<ol>
+<li><code>database.sql</code> is locked while Minetrack is running. Minetrack must be temporarily halted so the database file can be safely duplicated.</li>
+<li>Determine the start and end timestamps required. Prune the database file of any records outside those bounds.</li>
+<li><a href="https://www.sqlite.org/lang_vacuum.html"><code>VACUUM</code></a> the database file to repack its structure given the large amount of previously pruned data.</li>
+<li>zip the database file and upload to <a href="https://bunnycdn.com">BunnyCDN</a>. Once uploaded, add the link and information to <a href="https://data.minetrack.me">data.minetrack.me</a>.</li>
+<li>Tweet about it.</li>
+</ol>
+<p>Worse yet, this manual process results in an unreliable, and often delayed, publishing schedule. While failing to quickly publish Minecraft server player counts is unlikely to upend the the world, it is another vexing aspect of an already painful process.</p>
+<p>Obviously this process is ripe for automation via a hacky shell script.</p>
+<h3 id="quick--dirty-database-replication">Quick &amp; Dirty Database Replication</h3>
+<p>Starting in <a href="https://github.com/Cryptkeeper/Minetrack/blob/master/docs/CHANGELOG.md">Minetrack 5.5.8</a>, setting <code>createDailyDatabaseCopy: true</code> in <code>config.json</code> will automatically create a daily replica of <code>database.sql</code>, formatted as <code>database_copy_%d-%m-%yyyy.sql</code>.</p>
+<p><em>While I would prefer to see this operation happening external to the program, enabling Minetrack to create the database replica at a high level eases the complexity of producing a &ldquo;publish ready&rdquo; database whilst reducing potential failure points.</em></p>
+<p>With Minetrack replicating the database as it runs, with support for date rollovers, we need a script to:</p>
+<ol>
+<li>zip the database file.</li>
+<li>Upload the compressed database file to <a href="https://bunnycdn.com">BunnyCDN</a> for distribution.</li>
+<li>Cleanup the daily rollover file. (A full copy of the historical data is retained in the primary <code>database.sql</code> file.)</li>
+</ol>
+<p>With these requirements in mind, its easy to glue together a quick shell script.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"><span style="color:#75715e">#!/bin/bash
+</span><span style="color:#75715e"></span>
+upload_db<span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+	local databaseFile<span style="color:#f92672">=</span>$1
+	local databaseZipFile<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>databaseFile<span style="color:#e6db74">}</span><span style="color:#e6db74">.zip.temp&#34;</span>
+	
+	zip $databaseZipFile $databaseFile
+	
+	<span style="color:#75715e"># TODO: upload file...</span>
+	
+	rm $databaseZipFile
+<span style="color:#f92672">}</span>
+</code></pre></div><p>Our <code>upload_db</code> function will accept a parameter, named <code>databaseFile</code>. This is the database file that will be compressed and eventually uploaded.</p>
+<p>The provided database file is zipped into a newly named file. For example, <code>mydatabase.sql</code> becomes <code>mydatabase.sql.zip.temp</code>. This attempts to produce a unique-<em>ish</em> name to prevent potential clashes if multiple copies of the shell script are executed at the same time.</p>
+<h3 id="uploading-to-bunnycdn">Uploading to BunnyCDN</h3>
+<p>To upload the newly created zip file, <a href="https://bunnycdn.com">BunnyCDN</a> luckily offers a simple <a href="https://bunnycdnstorage.docs.apiary.io/#">storage API</a> with a route specifically for <a href="https://bunnycdnstorage.docs.apiary.io/#reference/0/storagezonenamepathfilename/put">uploading new files</a> using a <code>PUT</code> request. We can use <a href="https://curl.haxx.se/">curl</a> to make the HTTP request.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"><span style="color:#75715e">#!/bin/bash
+</span><span style="color:#75715e"></span>
+BUNNYCDN_API_KEY<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;&#34;</span>
+BUNNYCDN_REGION<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;ny&#34;</span>
+BUNNYCDN_STORAGE_ZONE<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;minetrackdata&#34;</span>
+
+upload_db<span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+	local databaseFile<span style="color:#f92672">=</span>$1
+	local databaseZipFile<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>databaseFile<span style="color:#e6db74">}</span><span style="color:#e6db74">.zip.temp&#34;</span>
+	
+	zip $databaseZipFile $databaseFile
+	
+	local uploadPath<span style="color:#f92672">=</span>$2
+	local uploadFile<span style="color:#f92672">=</span>$3
+	
+	curl --upload-file $databaseZipFile <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>		--header <span style="color:#e6db74">&#34;AccessKey: </span><span style="color:#e6db74">${</span>BUNNYCDN_API_KEY<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span> <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>		<span style="color:#e6db74">&#34;https://</span><span style="color:#e6db74">${</span>BUNNYCDN_REGION<span style="color:#e6db74">}</span><span style="color:#e6db74">.storage.bunnycdn.com/</span><span style="color:#e6db74">${</span>BUNNYCDN_STORAGE_ZONE<span style="color:#e6db74">}</span><span style="color:#e6db74">/</span><span style="color:#e6db74">${</span>uploadPath<span style="color:#e6db74">}</span><span style="color:#e6db74">/</span><span style="color:#e6db74">${</span>uploadFile<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>
+		
+	rm $databaseZipFile
+<span style="color:#f92672">}</span>
+</code></pre></div><p>In order to use BunnyCDN&rsquo;s API, there is a few values we need to set.</p>
+<ol>
+<li>In the <a href="https://bunnycdnstorage.docs.apiary.io/#authentication">Authentication and Authorization</a> section of the documentation, it describes a required &ldquo;AccessKey&rdquo; header. You will need to locate your API key and set <code>BUNNYCDN_API_KEY</code> to match.</li>
+<li>If your storage zone is not in BunnyCDN&rsquo;s &ldquo;ny&rdquo; region, you will need to set <code>BUNNYCDN_REGION</code> to match.</li>
+<li><code>BUNNYCDN_STORAGE_ZONE</code> is the name of your storage zone. In my case, this is &ldquo;minetrackdata&rdquo;. If you are using a <code>b-cdn.net</code> domain, such as <code>minetrackdata.b-cdn.net</code>, the subdomain is your storage zone name.</li>
+</ol>
+<p>Finally, two new parameters, <code>uploadPath</code> and <code>uploadFile</code> have been added. Together, these control where the uploaded file is stored in your BunnyCDN storage zone.</p>
+<h3 id="customizing-the-upload-script">Customizing the Upload Script</h3>
+<p>To better integrate this function with my expected use case, I&rsquo;m going to make a few changes.</p>
+<ol>
+<li>Using <a href="https://en.wikipedia.org/wiki/Cron">cron</a>, I have scheduled the script to run at 12:05am each day - 5 minutes after Minetrack creates the <em>next</em> daily replica database file. Because it is running &ldquo;the next day&rdquo;, the script will need to use yesterday&rsquo;s date.</li>
+<li><code>uploadFile</code> is now automatically set using yesterday&rsquo;s date.</li>
+<li><code>databaseFile</code> is now also deleted after being uploaded.</li>
+</ol>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"><span style="color:#75715e">#!/bin/bash
+</span><span style="color:#75715e"></span>
+BUNNYCDN_API_KEY<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;&#34;</span>
+BUNNYCDN_REGION<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;ny&#34;</span>
+BUNNYCDN_STORAGE_ZONE<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;minetrackdata&#34;</span>
+
+YESTERDAY_DATE<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>date +%-d-%-m-%Y -d <span style="color:#e6db74">&#34;1 day ago&#34;</span><span style="color:#66d9ef">)</span>
+
+upload_db<span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+	local databaseFile<span style="color:#f92672">=</span>$1
+	local databaseZipFile<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>databaseFile<span style="color:#e6db74">}</span><span style="color:#e6db74">.zip.temp&#34;</span>
+	
+	zip $databaseZipFile $databaseFile
+	
+	local uploadPath<span style="color:#f92672">=</span>$2
+	local uploadFile<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>YESTERDAY_DATE<span style="color:#e6db74">}</span><span style="color:#e6db74">.sql.zip&#34;</span>
+
+	curl --upload-file $databaseZipFile <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>		--header <span style="color:#e6db74">&#34;AccessKey: </span><span style="color:#e6db74">${</span>BUNNYCDN_API_KEY<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span> <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>		<span style="color:#e6db74">&#34;https://</span><span style="color:#e6db74">${</span>BUNNYCDN_REGION<span style="color:#e6db74">}</span><span style="color:#e6db74">.storage.bunnycdn.com/</span><span style="color:#e6db74">${</span>BUNNYCDN_STORAGE_ZONE<span style="color:#e6db74">}</span><span style="color:#e6db74">/</span><span style="color:#e6db74">${</span>uploadPath<span style="color:#e6db74">}</span><span style="color:#e6db74">/</span><span style="color:#e6db74">${</span>uploadFile<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>
+		
+	rm $databaseZipFile
+	rm $databaseFile
+<span style="color:#f92672">}</span>
+</code></pre></div><p><em>There&rsquo;s an obvious lack of error handling in this script. As such, you should NOT use this for any important purposes. My usage of the script is with duplicated data that can be safely lost, with monitoring present to detect failures.</em></p>
+<p>Finally, the script can call the <code>upload_db</code> function and we&rsquo;re done.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">upload_db <span style="color:#e6db74">&#34;Minetrack/database_copy_</span><span style="color:#e6db74">${</span>YESTERDAY_DATE<span style="color:#e6db74">}</span><span style="color:#e6db74">.sql&#34;</span> <span style="color:#e6db74">&#34;Daily&#34;</span>
+</code></pre></div><p>This automatically uploads yesterday&rsquo;s database file from the <code>Minetrack/</code> directory into the <code>Daily/</code> directory on the storage zone. Due to my changes to <code>upload_db</code>, the file will automatically be named after yesterday&rsquo;s date.</p>
+<p>If we manually construct the file path, we should find our newly uploaded file.</p>
+<p><code>https://minetrackdata.b-cdn.net/Daily/1-8-2020.sql.zip</code></p>
+<figure>
+    <img src="/MinetrackData_images/download_preview.png"/> 
+</figure>
+
+<p>Voila!</p>
+<p>Our daily Minetrack database replica is now set to be automatically uploaded to <a href="https://bunnycdn.com">BunnyCDN</a> for cheap distribution to fans of numbers all around the world.</p>
+<p>Using BunnyCDN&rsquo;s <a href="https://bunnycdnstorage.docs.apiary.io/#reference/0//%7Bstoragezonename%7D/%7Bpath%7D/">storage API</a>, we can further develop the script to automatically generate a page of download links - but that&rsquo;s for next time.</p>
+</article>
+
+        </main><footer id="footer">
+    
+</footer>
+</body>
+</html>

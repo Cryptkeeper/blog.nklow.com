@@ -6,9 +6,20 @@
     <description>Recent content on Tales from a Crypt</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Sat, 11 Jul 2020 14:42:45 -0500</lastBuildDate>
+    <lastBuildDate>Sun, 02 Aug 2020 15:35:24 -0500</lastBuildDate>
     
 	<atom:link href="https://blog.nklow.com/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    
+    <item>
+      <title>Automating Data Publishing with BunnyCDN</title>
+      <link>https://blog.nklow.com/posts/automating-minetrack-data-publishing/</link>
+      <pubDate>Sun, 02 Aug 2020 15:35:24 -0500</pubDate>
+      
+      <guid>https://blog.nklow.com/posts/automating-minetrack-data-publishing/</guid>
+      <description>Automatically publishing daily Minetrack database replicas using BunnyCDN</description>
+    </item>
     
     
     

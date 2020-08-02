@@ -3,12 +3,17 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   
   <url>
-    <loc>https://blog.nklow.com/posts/five-years-of-minetrack/</loc>
-    <lastmod>2020-07-11T14:42:45-05:00</lastmod>
+    <loc>https://blog.nklow.com/posts/automating-minetrack-data-publishing/</loc>
+    <lastmod>2020-08-02T15:35:24-05:00</lastmod>
   </url>
   
   <url>
     <loc>https://blog.nklow.com/</loc>
+    <lastmod>2020-08-02T15:35:24-05:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://blog.nklow.com/posts/five-years-of-minetrack/</loc>
     <lastmod>2020-07-11T14:42:45-05:00</lastmod>
   </url>
   
