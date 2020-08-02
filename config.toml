@@ -1,0 +1,6 @@
+baseURL = "https://blog.nklow.com"
+languageCode = "en-us"
+title = "Tales from a Crypt"
+theme = "etch"
+enableRobotsTXT = true
+publishDir = "docs"
