@@ -4,3 +4,4 @@ title = "Tales from a Crypt"
 theme = "etch"
 enableRobotsTXT = true
 publishDir = "docs"
+disableKinds = ["section", "taxonomy", "taxonomyTerm"]
