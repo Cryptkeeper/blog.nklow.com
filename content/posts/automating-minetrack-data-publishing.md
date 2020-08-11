@@ -3,6 +3,7 @@ title: "Automating Data Publishing with BunnyCDN"
 date: 2020-08-02T15:35:24-05:00
 tags: ["minecraft", "minetrack", "sqlite", "bunnycdn"]
 summary: "Automatically publishing daily Minetrack database replicas using BunnyCDN"
+series: test
 ---
 
 As [Minetrack](https://minetrack.me) continually polls Minecraft servers, the  collected player counts are timestamped and inserted into an [SQLite](https://sqlite.org) database. Never one to hoard data (...and to free up some disk space) I began publishing Minetrack's databases at [data.minetrack.me](https://data.minetrack.me). 
@@ -30,7 +31,7 @@ With Minetrack replicating the database as it runs, with support for date rollov
 2. Upload the compressed database file to [BunnyCDN](https://bunnycdn.com) for distribution.
 3. Cleanup the daily rollover file. (A full copy of the historical data is retained in the primary `database.sql` file.)
 
-With these requirements in mind, its easy to glue together a quick shell script.
+With these requirements in mind, it's easy to glue together a quick shell script.
 
 ```bash
 #!/bin/bash
@@ -120,8 +121,6 @@ upload_db() {
 }
 ```
 
-_There's an obvious lack of error handling in this script. As such, you should NOT use this for any important purposes. My usage of the script is with duplicated data that can be safely lost, with monitoring present to detect failures._
-
 Finally, the script can call the `upload_db` function and we're done.
 
 ```bash
@@ -140,4 +139,6 @@ Voila!
 
 Our daily Minetrack database replica is now set to be automatically uploaded to [BunnyCDN](https://bunnycdn.com) for cheap distribution to fans of numbers all around the world.
 
-Using BunnyCDN's [storage API](https://bunnycdnstorage.docs.apiary.io/#reference/0//{storagezonename}/{path}/), we can further develop the script to automatically generate a page of download links - but that's for next time.
+### Further Improvements
+- There's an obvious lack of error handling in this script. Any serious uses of this script should increase visiblity using logging and safely check error returns of important operations.
+- BunnyCDN's storage API offers a route for fetching a file listing (complete with file metadata). [Using this we can develop a script to automatically generate a HTML table of download links.]({{< ref "automating-minetrack-data-publishing-part-2.md" >}})

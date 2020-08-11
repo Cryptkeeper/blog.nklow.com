@@ -40,7 +40,7 @@
 <li>Upload the compressed database file to <a href="https://bunnycdn.com">BunnyCDN</a> for distribution.</li>
 <li>Cleanup the daily rollover file. (A full copy of the historical data is retained in the primary <code>database.sql</code> file.)</li>
 </ol>
-<p>With these requirements in mind, its easy to glue together a quick shell script.</p>
+<p>With these requirements in mind, it&rsquo;s easy to glue together a quick shell script.</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"><span style="color:#75715e">#!/bin/bash
 </span><span style="color:#75715e"></span>
 upload_db<span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
@@ -116,8 +116,7 @@ upload_db<span style="color:#f92672">()</span> <span style="color:#f92672">{</sp
 	rm $databaseZipFile
 	rm $databaseFile
 <span style="color:#f92672">}</span>
-</code></pre></div><p><em>There&rsquo;s an obvious lack of error handling in this script. As such, you should NOT use this for any important purposes. My usage of the script is with duplicated data that can be safely lost, with monitoring present to detect failures.</em></p>
-<p>Finally, the script can call the <code>upload_db</code> function and we&rsquo;re done.</p>
+</code></pre></div><p>Finally, the script can call the <code>upload_db</code> function and we&rsquo;re done.</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">upload_db <span style="color:#e6db74">&#34;Minetrack/database_copy_</span><span style="color:#e6db74">${</span>YESTERDAY_DATE<span style="color:#e6db74">}</span><span style="color:#e6db74">.sql&#34;</span> <span style="color:#e6db74">&#34;Daily&#34;</span>
 </code></pre></div><p>This automatically uploads yesterday&rsquo;s database file from the <code>Minetrack/</code> directory into the <code>Daily/</code> directory on the storage zone. Due to my changes to <code>upload_db</code>, the file will automatically be named after yesterday&rsquo;s date.</p>
 <p>If we manually construct the file path, we should find our newly uploaded file.</p>
@@ -128,7 +127,11 @@ upload_db<span style="color:#f92672">()</span> <span style="color:#f92672">{</sp
 
 <p>Voila!</p>
 <p>Our daily Minetrack database replica is now set to be automatically uploaded to <a href="https://bunnycdn.com">BunnyCDN</a> for cheap distribution to fans of numbers all around the world.</p>
-<p>Using BunnyCDN&rsquo;s <a href="https://bunnycdnstorage.docs.apiary.io/#reference/0//%7Bstoragezonename%7D/%7Bpath%7D/">storage API</a>, we can further develop the script to automatically generate a page of download links - but that&rsquo;s for next time.</p>
+<h3 id="further-improvements">Further Improvements</h3>
+<ul>
+<li>There&rsquo;s an obvious lack of error handling in this script. Any serious uses of this script should increase visiblity using logging and safely check error returns of important operations.</li>
+<li>BunnyCDN&rsquo;s storage API offers a route for fetching a file listing (complete with file metadata). <a href="https://blog.nklow.com/posts/automating-minetrack-data-publishing-part-2/">Using this we can develop a script to automatically generate a HTML table of download links.</a></li>
+</ul>
 </article>
 
         </main><footer id="footer">

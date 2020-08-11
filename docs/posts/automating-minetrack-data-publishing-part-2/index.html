@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html><head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <link rel="shortcut icon" href="https://blog.nklow.com/favicon.ico">
+    
+    <link rel="stylesheet" href="/css/style.min.css">
+
+    <title>Automating Data Publishing with BunnyCDN (Part 2)</title>
+</head>
+<body><header id="banner">
+    <h2><a href="https://blog.nklow.com">Tales from a Crypt</a></h2>
+    <nav>
+        <ul>
+            
+        </ul>
+    </nav>
+</header>
+<main id="content">
+<article>
+    <header id="post-header">
+        <h1>Automating Data Publishing with BunnyCDN (Part 2)</h1><time>August 11, 2020</time></header><p>This post is a continuation of <a href="https://blog.nklow.com/posts/automating-minetrack-data-publishing/">&ldquo;Automating Data Publishing with BunnyCDN&rdquo;</a>.</p>
+<p>With a quick shell script to automatically upload daily copies of <a href="https://minetrack.me">Minetrack&rsquo;s</a> database to <a href="https://bunnycdn.com">BunnyCDN</a> for publishing in hand, its time to generate a page of download links.</p>
+<p>Since I already have a previously designed page, I&rsquo;m going to insert some unique strings to use as substitution patterns for <a href="https://en.wikipedia.org/wiki/Sed">sed</a> later on. This will be saved as <code>index.html.template</code>. You&rsquo;re free to name it as you wish, but you must remember to update any usages of the filename.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-html" data-lang="html">&lt;<span style="color:#f92672">details</span>&gt;
+	&lt;<span style="color:#f92672">summary</span>&gt;Minetrack Bedrock&lt;/<span style="color:#f92672">summary</span>&gt;
+	___BUILD_SCRIPT_ENTRY_Bedrock___
+&lt;/<span style="color:#f92672">details</span>&gt;
+&lt;<span style="color:#f92672">details</span>&gt;
+	&lt;<span style="color:#f92672">summary</span>&gt;Minetrack Java&lt;/<span style="color:#f92672">summary</span>&gt;
+	___BUILD_SCRIPT_ENTRY_Java___
+&lt;/<span style="color:#f92672">details</span>&gt;
+</code></pre></div><h3 id="using-the-bunnycdn-storage-api">Using the BunnyCDN Storage API</h3>
+<p>Looking back at BunnyCDN&rsquo;s <a href="https://bunnycdnstorage.docs.apiary.io/#">storage API</a> we can see a route which &ldquo;retrieves a list of files and directories located in the given directory&rdquo;. To help keep things organized, I&rsquo;m going to create a new shell script, <code>build_website.sh</code>.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"><span style="color:#75715e">#!/bin/bash
+</span><span style="color:#75715e"></span>
+BUNNYCDN_API_KEY<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;&#34;</span>
+BUNNYCDN_REGION<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;ny&#34;</span>
+BUNNYCDN_STORAGE_ZONE<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;minetrackdata&#34;</span>
+</code></pre></div><p>Same as previous usage of the BunnyCDN storage API, there is a few values we need to set.</p>
+<ol>
+<li>In the <a href="https://bunnycdnstorage.docs.apiary.io/#authentication">Authentication and Authorization</a> section of the documentation, it describes a required &ldquo;AccessKey&rdquo; header. You will need to locate your API key and set <code>BUNNYCDN_API_KEY</code> to match.</li>
+<li>If your storage zone is not in BunnyCDN&rsquo;s &ldquo;ny&rdquo; region, you will need to set <code>BUNNYCDN_REGION</code> to match.</li>
+<li><code>BUNNYCDN_STORAGE_ZONE</code> is the name of your storage zone. In my case, this is &ldquo;minetrackdata&rdquo;. If you are using a <code>b-cdn.net</code> domain, such as <code>minetrackdata.b-cdn.net</code>, the subdomain is your storage zone name.</li>
+</ol>
+<p>Since this script&rsquo;s usage of the API doesn&rsquo;t modify anything, you should considering using the &ldquo;read only&rdquo; API key offered by BunnyCDN.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"><span style="color:#75715e">#!/bin/bash
+</span><span style="color:#75715e"></span>
+BUNNYCDN_API_KEY<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;&#34;</span>
+BUNNYCDN_REGION<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;ny&#34;</span>
+BUNNYCDN_STORAGE_ZONE<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;minetrackdata&#34;</span>
+
+render_table<span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+	local BUNNYCDN_PATH<span style="color:#f92672">=</span>$1
+	local BUNNYCDN_FILE_LIST<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>curl --header <span style="color:#e6db74">&#34;AccessKey: </span><span style="color:#e6db74">${</span>BUNNYCDN_API_KEY<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span> --silent <span style="color:#e6db74">&#34;https://</span><span style="color:#e6db74">${</span>BUNNYCDN_REGION<span style="color:#e6db74">}</span><span style="color:#e6db74">.storage.bunnycdn.com/</span><span style="color:#e6db74">${</span>BUNNYCDN_STORAGE_ZONE<span style="color:#e6db74">}</span><span style="color:#e6db74">/</span><span style="color:#e6db74">${</span>BUNNYCDN_PATH<span style="color:#e6db74">}</span><span style="color:#e6db74">/&#34;</span><span style="color:#66d9ef">)</span>
+	
+	echo $BUNNYCDN_FILE_LIST
+<span style="color:#f92672">}</span>
+</code></pre></div><p>Since Minetrack publishes its files to two pre-determined directories, I&rsquo;ve opted to make the <code>BUNNYCDN_PATH</code> variable a function parameter instead of hardcoding its value.</p>
+<p>Same as before, we are using <a href="https://curl.haxx.se/">curl</a> to make the API request. This time around I&rsquo;ve added the <code>--silent</code> argument to avoid curl outputting any text. This is important because the output will now be fed into <a href="https://stedolan.github.io/jq/">jq</a>, a tool for parsing JSON.</p>
+<h3 id="json-parsing-with-jq">JSON Parsing with jq</h3>
+<p>If you call <code>render_table</code>, you&rsquo;ll now see a JSON formatted array like so. I&rsquo;ve removed several fields in my example (such as <code>LastChanged</code> and <code>IsDirectory</code>) since I won&rsquo;t be using them.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json">[
+  {
+    <span style="color:#f92672">&#34;ObjectName&#34;</span>: <span style="color:#e6db74">&#34;1-8-2020.sql.zip&#34;</span>,
+    <span style="color:#f92672">&#34;Length&#34;</span>: <span style="color:#ae81ff">303293</span>,
+    <span style="color:#f92672">&#34;DateCreated&#34;</span>: <span style="color:#e6db74">&#34;2020-08-02T01:49:17.17&#34;</span>,
+  },
+  <span style="color:#960050;background-color:#1e0010">...</span>
+]
+</code></pre></div><p>By feeding <code>$BUNNYCDN_FILE_LIST</code> into <a href="https://stedolan.github.io/jq/">jq</a>, we can easily iterate over the JSON array to handle each file individually. Additionally, two important arguments are being passed to <code>jq</code>.</p>
+<ol>
+<li><code>--compact-output</code> prints each JSON object without newlines. This will allow us to parse each JSON object individually within the <code>for</code> loop.</li>
+<li><code>sort_by(.DateCreated)</code> sorts (in ascending order) the JSON array using the <code>DateCreated</code> field within each JSON object. This avoids the BunnyCDN API returning the JSON objects out of order.</li>
+</ol>
+<p>For more information on <code>jq</code> arguments and usage, check out its <a href="https://stedolan.github.io/jq/manual/">manual</a>.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"><span style="color:#75715e">#!/bin/bash
+</span><span style="color:#75715e"></span>
+BUNNYCDN_API_KEY<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;d8ec9476-16ff-409e-bea303a7aae6-3505-4355&#34;</span>
+BUNNYCDN_REGION<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;ny&#34;</span>
+BUNNYCDN_STORAGE_ZONE<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;minetrackdata&#34;</span>
+
+render_table<span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+	local BUNNYCDN_PATH<span style="color:#f92672">=</span>$1
+	local BUNNYCDN_FILE_LIST<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>curl --header <span style="color:#e6db74">&#34;AccessKey: </span><span style="color:#e6db74">${</span>BUNNYCDN_API_KEY<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span> --silent <span style="color:#e6db74">&#34;https://</span><span style="color:#e6db74">${</span>BUNNYCDN_REGION<span style="color:#e6db74">}</span><span style="color:#e6db74">.storage.bunnycdn.com/</span><span style="color:#e6db74">${</span>BUNNYCDN_STORAGE_ZONE<span style="color:#e6db74">}</span><span style="color:#e6db74">/</span><span style="color:#e6db74">${</span>BUNNYCDN_PATH<span style="color:#e6db74">}</span><span style="color:#e6db74">/&#34;</span><span style="color:#66d9ef">)</span>
+
+	<span style="color:#66d9ef">for</span> FILE in <span style="color:#66d9ef">$(</span>echo $BUNNYCDN_FILE_LIST | jq --compact-output <span style="color:#e6db74">&#39;sort_by(.DateCreated) | .[]&#39;</span><span style="color:#66d9ef">)</span>
+	<span style="color:#66d9ef">do</span>
+		<span style="color:#75715e"># ...</span>
+	<span style="color:#66d9ef">done</span>
+<span style="color:#f92672">}</span>
+</code></pre></div><p>At this point, in each iteration <code>$FILE</code> is a JSON object representing an individual file in the BunnyCDN storage zone, in ascending order according to its <code>DateCreated</code> field.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json">{
+	<span style="color:#f92672">&#34;ObjectName&#34;</span>: <span style="color:#e6db74">&#34;1-8-2020.sql.zip&#34;</span>,
+	<span style="color:#f92672">&#34;Length&#34;</span>: <span style="color:#ae81ff">303293</span>,
+	<span style="color:#f92672">&#34;DateCreated&#34;</span>: <span style="color:#e6db74">&#34;2020-08-02T01:49:17.17&#34;</span>
+}
+</code></pre></div><p><em>If you have subdirectories in your path, you may wish to check the <code>IsDirectory</code> field to prevent your script from including subdirectories.</em></p>
+<p>Using <code>jq</code> again, we can extract whatever JSON object fields we wish into variables in our script:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">myScriptVariable<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>echo $FILE | jq --raw-output <span style="color:#e6db74">&#39;.MyJsonVariable&#39;</span><span style="color:#66d9ef">)</span>
+</code></pre></div><p>The <code>--raw-output</code> argument (also available as <code>-r</code>) ensures <code>jq</code> outputs the value directly, without JSON formatting. For example, <code>.ObjectName</code> will print as <code>1-8-2020.sql.zip</code> and not its JSON formatted equivalent, <code>&quot;1-8-2020.sql.zip&quot;</code> (note the double quotes).</p>
+<p>I&rsquo;ve gone ahead and opted to further format the <code>lengthMegabytes</code> and <code>dateCreated</code> fields to make them human friendly.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"><span style="color:#66d9ef">for</span> FILE in <span style="color:#66d9ef">$(</span>echo $BUNNYCDN_FILE_LIST | jq --compact-output <span style="color:#e6db74">&#39;sort_by(.DateCreated) | .[]&#39;</span><span style="color:#66d9ef">)</span>
+<span style="color:#66d9ef">do</span>
+	<span style="color:#75715e"># .Length is in bytes</span>
+	<span style="color:#75715e"># Divide by 1024^2 to convert it into megabytes</span>
+	<span style="color:#75715e"># Use awk&#39;s printf to format it with 2 decimal points of precision</span>
+	lengthMegabytes<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>echo $FILE | jq -r <span style="color:#e6db74">&#39;.Length&#39;</span> | awk <span style="color:#e6db74">&#39;{printf &#34;%.2f&#34;, $0 / 1024 / 1024}&#39;</span><span style="color:#66d9ef">)</span>
+	
+	<span style="color:#75715e"># .DateCreated is a date+time string (2020-08-02T01:49:17.17)</span>
+	<span style="color:#75715e"># Use cut to split the string at &#39;T&#39; and return the 1st part</span>
+	<span style="color:#75715e"># 2020-08-02T01:49:17.17 -&gt; 2020-08-02</span>
+	dateCreated<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>echo $FILE | jq -r <span style="color:#e6db74">&#39;.DateCreated&#39;</span> | cut -d <span style="color:#e6db74">&#39;T&#39;</span> -f 1<span style="color:#66d9ef">)</span>
+	
+	<span style="color:#75715e"># Use the value directly, no formatting changes needed</span>
+	objectName<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>echo $FILE | jq -r <span style="color:#e6db74">&#39;.ObjectName&#39;</span><span style="color:#66d9ef">)</span>
+<span style="color:#66d9ef">done</span>
+</code></pre></div><p>At this point we&rsquo;ve established how to make the BunnyCDN API request, parse the JSON array response, read each JSON object and extract the values we&rsquo;re interested in. All that&rsquo;s left is to generate some HTML with our extracted values, and insert it into the previously created <code>index.html.template</code> file.</p>
+<h3 id="generating-html">Generating HTML</h3>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">render_table<span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+	local BUNNYCDN_PATH<span style="color:#f92672">=</span>$1
+	local BUNNYCDN_FILE_LIST<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>curl --header <span style="color:#e6db74">&#34;AccessKey: </span><span style="color:#e6db74">${</span>BUNNYCDN_API_KEY<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span> --silent <span style="color:#e6db74">&#34;https://</span><span style="color:#e6db74">${</span>BUNNYCDN_REGION<span style="color:#e6db74">}</span><span style="color:#e6db74">.storage.bunnycdn.com/</span><span style="color:#e6db74">${</span>BUNNYCDN_STORAGE_ZONE<span style="color:#e6db74">}</span><span style="color:#e6db74">/</span><span style="color:#e6db74">${</span>BUNNYCDN_PATH<span style="color:#e6db74">}</span><span style="color:#e6db74">/&#34;</span><span style="color:#66d9ef">)</span>
+
+	<span style="color:#66d9ef">for</span> FILE in <span style="color:#66d9ef">$(</span>echo $BUNNYCDN_FILE_LIST | jq -c <span style="color:#e6db74">&#39;sort_by(.DateCreated) | .[]&#39;</span><span style="color:#66d9ef">)</span>
+	<span style="color:#66d9ef">do</span>
+		lengthMegabytes<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>echo $FILE | jq -r <span style="color:#e6db74">&#39;.Length&#39;</span> | awk <span style="color:#e6db74">&#39;{printf &#34;%.2f&#34;, $0 / 1024 / 1024}&#39;</span><span style="color:#66d9ef">)</span>
+		dateCreated<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>echo $FILE | jq -r <span style="color:#e6db74">&#39;.DateCreated&#39;</span> | cut -d <span style="color:#e6db74">&#39;T&#39;</span> -f 1<span style="color:#66d9ef">)</span>
+		objectName<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>echo $FILE | jq -r <span style="color:#e6db74">&#39;.ObjectName&#39;</span><span style="color:#66d9ef">)</span>
+		
+		local rows<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;</span>$rows<span style="color:#e6db74">\
+</span><span style="color:#e6db74">			&lt;tr&gt; \
+</span><span style="color:#e6db74">				&lt;td&gt;</span><span style="color:#e6db74">${</span>objectName<span style="color:#e6db74">}</span><span style="color:#e6db74">&lt;/td&gt;\
+</span><span style="color:#e6db74">				&lt;td&gt;</span><span style="color:#e6db74">${</span>lengthMegabytes<span style="color:#e6db74">}</span><span style="color:#e6db74"> MB&lt;/td&gt;\
+</span><span style="color:#e6db74">				&lt;td&gt;</span><span style="color:#e6db74">${</span>dateCreated<span style="color:#e6db74">}</span><span style="color:#e6db74">&lt;/td&gt;\
+</span><span style="color:#e6db74">				&lt;td&gt;&lt;a href=\&#34;https://</span><span style="color:#e6db74">${</span>BUNNYCDN_STORAGE_ZONE<span style="color:#e6db74">}</span><span style="color:#e6db74">.b-cdn.net/</span><span style="color:#e6db74">${</span>BUNNYCDN_PATH<span style="color:#e6db74">}</span><span style="color:#e6db74">/</span><span style="color:#e6db74">${</span>objectName<span style="color:#e6db74">}</span><span style="color:#e6db74">\&#34;&gt;BunnyCDN&lt;/a&gt;&lt;/td&gt;\
+</span><span style="color:#e6db74">			&lt;/tr&gt;&#34;</span>
+	<span style="color:#66d9ef">done</span>
+
+	echo <span style="color:#e6db74">&#34;&lt;table&gt;\
+</span><span style="color:#e6db74">			&lt;thead&gt;\
+</span><span style="color:#e6db74">				&lt;tr&gt;\
+</span><span style="color:#e6db74">					&lt;td&gt;File&lt;/td&gt;\
+</span><span style="color:#e6db74">					&lt;td&gt;Size&lt;/td&gt;\
+</span><span style="color:#e6db74">					&lt;td&gt;Date Uploaded&lt;/td&gt;\
+</span><span style="color:#e6db74">					&lt;td&gt;Download&lt;/td&gt;\
+</span><span style="color:#e6db74">				&lt;/tr&gt;\
+</span><span style="color:#e6db74">			&lt;/thead&gt;\
+</span><span style="color:#e6db74">			&lt;tbody&gt;\
+</span><span style="color:#e6db74">				</span><span style="color:#e6db74">${</span>rows<span style="color:#e6db74">}</span><span style="color:#e6db74">\
+</span><span style="color:#e6db74">			&lt;/tbody&gt;\
+</span><span style="color:#e6db74">		&lt;/table&gt;&#34;</span>
+<span style="color:#f92672">}</span>
+</code></pre></div><p>Using a local variable, <code>$rows</code>, each iteration of the <code>for</code> loop now appends a HTML table row containing our extracted variables. At the end of the <code>render_table</code> function, it is inserted into a pre-defined HTML table string.</p>
+<p>While BunnyCDN&rsquo;s storage API returns a <code>Path</code> value for each file, it includes the storage zone name (for example, <code>/minetrackdata/Test/</code> instead of <code>Test/</code>). This is an issue since download links only use the storage zone as the subdomain (assuming you&rsquo;re not using a custom domain), and not part of the path. To side step this issue, I&rsquo;ve opted to manually construct the download link URL by re-using the previously created <code>$BUNNYCDN_PATH</code> variable.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">https://<span style="color:#e6db74">${</span>BUNNYCDN_STORAGE_ZONE<span style="color:#e6db74">}</span>.b-cdn.net/<span style="color:#e6db74">${</span>BUNNYCDN_PATH<span style="color:#e6db74">}</span>/<span style="color:#e6db74">${</span>objectName<span style="color:#e6db74">}</span>
+</code></pre></div><p>Upon calling <code>render_table</code>, a HTML table structure should now be printed.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-html" data-lang="html">&lt;<span style="color:#f92672">table</span>&gt; 
+	&lt;<span style="color:#f92672">thead</span>&gt;
+		&lt;<span style="color:#f92672">tr</span>&gt;
+			&lt;<span style="color:#f92672">td</span>&gt;File&lt;/<span style="color:#f92672">td</span>&gt;
+			&lt;<span style="color:#f92672">td</span>&gt;Size&lt;/<span style="color:#f92672">td</span>&gt;
+			&lt;<span style="color:#f92672">td</span>&gt;Date Uploaded&lt;/<span style="color:#f92672">td</span>&gt;
+			&lt;<span style="color:#f92672">td</span>&gt;Download&lt;/<span style="color:#f92672">td</span>&gt;
+		&lt;/<span style="color:#f92672">tr</span>&gt;
+	&lt;/<span style="color:#f92672">thead</span>&gt;
+	&lt;<span style="color:#f92672">tbody</span>&gt;
+		&lt;<span style="color:#f92672">tr</span>&gt;
+			&lt;<span style="color:#f92672">td</span>&gt;1-8-2020.sql.zip&lt;/<span style="color:#f92672">td</span>&gt;
+			&lt;<span style="color:#f92672">td</span>&gt;0.29 MB&lt;/<span style="color:#f92672">td</span>&gt;
+			&lt;<span style="color:#f92672">td</span>&gt;2020-08-02&lt;/<span style="color:#f92672">td</span>&gt;
+			&lt;<span style="color:#f92672">td</span>&gt;&lt;<span style="color:#f92672">a</span> <span style="color:#a6e22e">href</span><span style="color:#f92672">=</span><span style="color:#e6db74">&#34;https://minetrackdata.b-cdn.net/Bedrock/1-8-2020.sql.zip&#34;</span>&gt;BunnyCDN&lt;/<span style="color:#f92672">a</span>&gt;&lt;/<span style="color:#f92672">td</span>&gt;
+		&lt;/<span style="color:#f92672">tr</span>&gt;
+		<span style="color:#75715e">&lt;!-- ... --&gt;</span>
+	&lt;/<span style="color:#f92672">tbody</span>&gt;
+&lt;/<span style="color:#f92672">table</span>&gt;
+</code></pre></div><h3 id="string-substitution-with-sed">String Substitution with sed</h3>
+<p>Finally, using <a href="https://en.wikipedia.org/wiki/Sed">sed</a> we can substitute our previously inserted unique marker strings with our generated HTML.</p>
+<p>Since I&rsquo;m generating several tables (with a strong possibility of adding more), I&rsquo;ve added an array of strings. Each string matches both its path in the BunnyCDN storage zone, and its unique marker string in the template.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">TEMPLATE<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>cat <span style="color:#e6db74">&#34;index.html.template&#34;</span><span style="color:#66d9ef">)</span>
+
+TABLES<span style="color:#f92672">=(</span> <span style="color:#e6db74">&#34;Bedrock&#34;</span> <span style="color:#e6db74">&#34;Java&#34;</span> <span style="color:#f92672">)</span>
+<span style="color:#66d9ef">for</span> TABLE in <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>TABLES[@]<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>
+<span style="color:#66d9ef">do</span>
+	HTML<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>render_table $TABLE<span style="color:#66d9ef">)</span>
+	PATTERN<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;___BUILD_SCRIPT_ENTRY_</span><span style="color:#e6db74">${</span>TABLE<span style="color:#e6db74">}</span><span style="color:#e6db74">___&#34;</span>
+	TEMPLATE<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>echo $TEMPLATE | sed <span style="color:#e6db74">&#34;s@</span><span style="color:#e6db74">${</span>PATTERN<span style="color:#e6db74">}</span><span style="color:#e6db74">@</span><span style="color:#e6db74">${</span>HTML<span style="color:#e6db74">}</span><span style="color:#e6db74">@&#34;</span><span style="color:#66d9ef">)</span>
+<span style="color:#66d9ef">done</span>
+</code></pre></div><p>The <code>sed</code> pattern uses <code>@</code> instead of the more commonly seen <code>/</code> to avoid parsing issues with the <code>/</code> characters contained within the generated HTML. <code>@</code> is only a suitable replacement since it is not contained within the generated HTML. If your generated HTML contains <code>@</code>, you will need to replace its usage.</p>
+<p>Finally, <code>$TEMPLATE</code> contains our template file with the newly generated and inserted HTML tables. We can output it to a file like so. This will also automatically overwrite the file if it already exists.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">echo $TEMPLATE &gt; <span style="color:#e6db74">&#34;index.html&#34;</span>
+</code></pre></div><h3 id="future-improvements">Future Improvements</h3>
+<p>In my usage I&rsquo;ve opted to output the file to <code>/usr/share/nginx/html/index.html</code> so that it is served by <a href="https://www.nginx.com/">nginx</a>. I&rsquo;ve added the script to my <a href="https://en.wikipedia.org/wiki/Cron">cron</a> schedule to automatically execute the script after the previous script has files have been uploaded.</p>
+<p>Obviously there&rsquo;s room for improvement in these scripts, especially in regards to error handling. That said, these two quick scripts have automated a painful amount of work and are simple enough to easily manage well into the future without confusion. For now, that&rsquo;s enough.</p>
+</article>
+
+        </main><footer id="footer">
+    
+</footer>
+</body>
+</html>
