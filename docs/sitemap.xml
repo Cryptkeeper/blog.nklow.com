@@ -3,12 +3,17 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   
   <url>
-    <loc>https://blog.nklow.com/posts/automating-minetrack-data-publishing-part-2/</loc>
-    <lastmod>2020-08-11T16:53:22-05:00</lastmod>
+    <loc>https://blog.nklow.com/posts/downloading-mercari-listing-images/</loc>
+    <lastmod>2021-02-05T21:23:43-06:00</lastmod>
   </url>
   
   <url>
     <loc>https://blog.nklow.com/</loc>
+    <lastmod>2021-02-05T21:23:43-06:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://blog.nklow.com/posts/automating-minetrack-data-publishing-part-2/</loc>
     <lastmod>2020-08-11T16:53:22-05:00</lastmod>
   </url>
   

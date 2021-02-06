@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html><head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <link rel="shortcut icon" href="https://blog.nklow.com/favicon.ico">
+    
+    <link rel="stylesheet" href="/css/style.min.css">
+
+    <title>Downloading Mercari Listing Images</title>
+</head>
+<body><header id="banner">
+    <h2><a href="https://blog.nklow.com">Tales from a Crypt</a></h2>
+    <nav>
+        <ul>
+            
+        </ul>
+    </nav>
+</header>
+<main id="content">
+<article>
+    <header id="post-header">
+        <h1>Downloading Mercari Listing Images</h1><time>February 5, 2021</time></header><p>Yet another marketplace, <a href="https://www.mercari.com/">Mercari</a> is rather mediocre with several rough edges. As a <del>digital hoarder</del> amateur archivist, downloading and archiving images from Mercari listings is rather difficult. Their frontend uses cropped, low resolution images and seems to enjoy making image viewing a very painful experience by hijacking your cursor and scroll wheel. Although I keep trying, a right click and &ldquo;Save As&hellip;&rdquo; has yet to save me.</p>
+<p>Rather than continuing to fight a website and lose, the easiest solution is to write a simple shell script for downloading the product images for a given Mercari listing.</p>
+<h2 id="mercaris-dynamic-image-generation">Mercari&rsquo;s Dynamic Image Generation</h2>
+<p>To make an example of a random Mercari listing, consider this url: <code>https://www.mercari.com/us/item/m51613244349/</code></p>
+<p><code>m51613244349</code> is the Mercari listing&rsquo;s uniquely assigned id. Currently it seems to use 11-digit values (excluding <code>m</code>), but a more flexible regex will likely pay off at some point in the future: <code>(m)[0-9]{8,16}</code></p>
+<p>Opening Firefox&rsquo;s <a href="https://developer.mozilla.org/en-US/docs/Tools/Network_Monitor">Network Monitor</a>, you should see several requests to <code>mercari-images.global.ssl.fastly.net</code> (depending on the amount of images in the product listing). Each of these requests is used to load a small preview thumbnail of a larger image.</p>
+<p>For example:</p>
+<p><code>m51613244349_1.jpg?1612581994&amp;w=200&amp;h=200&amp;fitcrop&amp;sharpen</code>
+<code>m51613244349_2.jpg?1612581994&amp;w=200&amp;h=200&amp;fitcrop&amp;sharpen</code>
+<code>m51613244349_3.jpg?1612581994&amp;w=200&amp;h=200&amp;fitcrop&amp;sharpen</code></p>
+<p>Our favorite Mercari listing id starts the filepath, proceeded by an incrementing number that we&rsquo;ll creatively call the <em>file number</em>. The file number starts at 1 and ends at a maximum value of 12 (although this is an arbitrary limit imposed by Mercari).</p>
+<p>Next up is an epoch timestamp value in seconds. It is likely used for cache invalidation purposes. You may omit the value seemingly without issue.</p>
+<p>Finally, our <code>w</code>, <code>h</code>, <code>fitcrop</code> and <code>sharpen</code> parameters hint that this endpoint is likely doing dynamic image manipulation. This allows the Mercari frontend to request whatever it likes without worrying whether or not the image has been previously generated.</p>
+<p>But why should frontend developers have all the fun? We can use this endpoint ourselves to download uncropped, unresized product listing images.</p>
+<p>Taking a previous request, <code>m51613244349_1.jpg?1612581994&amp;w=200&amp;h=200&amp;fitcrop&amp;sharpen</code>, let&rsquo;s rebuild it into something more useful. I don&rsquo;t want cropped or filtered images, and cache timestamps be damned.</p>
+<p>Providing a height and width means we&rsquo;ll enforce a specific aspect ratio and could distort the image. Luckily their endpoint doesn&rsquo;t seem to mind omitting either of the values, ensuring it returns the image in its original aspect ratio.</p>
+<p>While we&rsquo;re at it, let&rsquo;s bump that 200px height to something&hellip; bigger.</p>
+<p>Finally we land at <code>m51613244349_1.jpg?h=8192</code></p>
+<h2 id="looping-it">Looping It</h2>
+<p>Given the file number has rigid bounds and is consistently incrementing, we can write a basic shell script to increment a variable and wget whatever image exists at that url, with whatever request parameters we like.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"><span style="color:#75715e">#!/bin/sh
+</span><span style="color:#75715e"></span>
+MERCARI_LISTING<span style="color:#f92672">=</span>$1
+IMG_SERVER_INDEX<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>
+IMG_HEIGHT<span style="color:#f92672">=</span><span style="color:#ae81ff">8192</span>
+
+<span style="color:#66d9ef">while</span> true
+<span style="color:#66d9ef">do</span>
+    URL<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;https://mercari-images.global.ssl.fastly.net/photos/</span><span style="color:#e6db74">${</span>MERCARI_LISTING<span style="color:#e6db74">}</span><span style="color:#e6db74">_</span><span style="color:#e6db74">${</span>IMG_SERVER_INDEX<span style="color:#e6db74">}</span><span style="color:#e6db74">.jpg?h=</span><span style="color:#e6db74">${</span>IMG_HEIGHT<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>
+    FILENAME<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>MERCARI_LISTING<span style="color:#e6db74">}</span><span style="color:#e6db74">_</span><span style="color:#e6db74">${</span>IMG_SERVER_INDEX<span style="color:#e6db74">}</span><span style="color:#e6db74">.jpg&#34;</span>
+    IMG_SERVER_INDEX<span style="color:#f92672">=</span><span style="color:#66d9ef">$((</span>IMG_SERVER_INDEX+1<span style="color:#66d9ef">))</span>   
+    wget --no-verbose --output-document<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;</span>$FILENAME<span style="color:#e6db74">&#34;</span> <span style="color:#e6db74">&#34;</span>$URL<span style="color:#e6db74">&#34;</span>
+    <span style="color:#66d9ef">if</span> <span style="color:#f92672">[</span> $? -ne <span style="color:#ae81ff">0</span> <span style="color:#f92672">]</span>
+    <span style="color:#66d9ef">then</span>
+        printf <span style="color:#e6db74">&#39;\xE2\x9C\x85\x0A&#39;</span>
+        break
+    <span style="color:#66d9ef">fi</span>
+<span style="color:#66d9ef">done</span>
+</code></pre></div><p>Instead of incrementing through file numbers 1 to 12, which could arbitrarily change in the future, I&rsquo;ve opted to read the HTTP status code returned by wget. Fastly seems to return a <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403">403 Forbidden</a> status when the url doesn&rsquo;t exist (or when they don&rsquo;t want us to know it does&hellip;). You can test this behavior if you use a file number of 0, 13 or anything higher than the total number of images in the product listing.</p>
+<h2 id="but-wait">But wait!</h2>
+<p><em>Why not scrape the page (spoof an endpoint call, etc) to know how many images there are?</em></p>
+<p>That requires the same amount of requests as iterating until you hit the end (n+1) and only adds extra complexity. Plus, the Mercari frontend seems to be a mess of dynamically named (or obfuscated) elements and Javascript.</p>
+<p><em>How large of an image can you request?</em></p>
+<p>I don&rsquo;t know. Requesting a height of something like 2048px ensures you&rsquo;re likely getting a decent quality when possible, without trying to hack together a &ldquo;4K&rdquo; image out of something taken on a iPhone 3GS.</p>
+<p><em>What if they shut it down?</em></p>
+<p>I wouldn&rsquo;t blame them. Allowing the frontend to dynamically generate images on the fly seems like a mess for caching purposes, page load speeds, and backend resources. If they do, I hope they provide someway to download the original images for archival and reference purposes.</p>
+</article>
+
+        </main><footer id="footer">
+    
+</footer>
+</body>
+</html>
