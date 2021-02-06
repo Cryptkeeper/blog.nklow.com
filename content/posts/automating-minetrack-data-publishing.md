@@ -3,7 +3,6 @@ title: "Automating Data Publishing with BunnyCDN"
 date: 2020-08-02T15:35:24-05:00
 tags: ["minecraft", "minetrack", "sqlite", "bunnycdn"]
 summary: "Automatically publishing daily Minetrack database replicas using BunnyCDN"
-series: test
 ---
 
 As [Minetrack](https://minetrack.me) continually polls Minecraft servers, the  collected player counts are timestamped and inserted into an [SQLite](https://sqlite.org) database. Never one to hoard data (...and to free up some disk space) I began publishing Minetrack's databases at [data.minetrack.me](https://data.minetrack.me). 

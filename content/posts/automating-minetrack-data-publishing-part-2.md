@@ -3,7 +3,6 @@ title: "Automating Data Publishing with BunnyCDN (Part 2)"
 date: 2020-08-11T16:53:22-05:00
 tags: ["minecraft", "minetrack", "sqlite", "bunnycdn"]
 summary: "Automatically publishing daily Minetrack database replicas using BunnyCDN"
-series: test
 ---
 
 This post is a continuation of ["Automating Data Publishing with BunnyCDN"]({{< ref "posts/automating-minetrack-data-publishing.md" >}}).
